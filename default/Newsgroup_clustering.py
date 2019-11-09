@@ -27,11 +27,19 @@ stop_words.extend(["'d", "'ll", "'re", "'s", "'ve", 'could', 'doe', 'ha', 'might
 vectorizer = TfidfVectorizer(tokenizer=lemmaTokenizer, max_df = 0.08, stop_words=stop_words)
 tfidf_X = vectorizer.fit_transform(dataset.values())
 
+"""
+svd = TruncatedSVD(n_components=500)
+tsne = TSNE(n_components=100, perplexity=50, method='exact', verbose=1, init='random', early_exaggeration=12,
+            metric='cosine')
+
+pipeline = make_pipeline(svd)
+tfidf_X = pipeline.fit_transform(tfidf_X)
+"""
+
 #Clustering TF-IDF ( MiniBatchKMEANS n=4 best for now)
 km = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit(tfidf_X)
 assignments = km.predict(vectorizer.transform(dataset.values()))
 clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
-
 
 def dump_to_file(filename, assignments, dataset):
     with open(filename, mode="w", newline="") as csvfile:
@@ -49,7 +57,7 @@ print("Computed Finished")
 
 
 """
-Get top words
+Create WorkCloud
 """
 def get_top_keywords(data, clusters, labels, n_terms):
     
@@ -80,7 +88,7 @@ def get_top_keywords(data, clusters, labels, n_terms):
         plt.axis("off") 
         plt.tight_layout(pad = 0) 
   
-        plt.show() 
+        plt.show()
 
 get_top_keywords(tfidf_X, clusters, vectorizer.get_feature_names(), 20)
     
