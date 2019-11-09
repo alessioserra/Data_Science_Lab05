@@ -7,6 +7,8 @@ import string
 from sklearn.cluster.k_means_ import MiniBatchKMeans
 import numpy as np
 import pandas as pd
+from wordcloud import WordCloud, STOPWORDS 
+import matplotlib.pyplot as plt 
 
 file_list = os.listdir("T-newsgroups")
 dataset = {}
@@ -45,16 +47,40 @@ def dump_to_file(filename, assignments, dataset):
 dump_to_file("result.csv", assignments, dataset)
 print("Computed Finished")
 
+
 """
 Get top words
 """
 def get_top_keywords(data, clusters, labels, n_terms):
+    
     df = pd.DataFrame(data.todense()).groupby(clusters).mean()
 
+    stopwords = set(STOPWORDS)
+
     for i, r in df.iterrows():
+        
+        comment_words = ""
+        
         print('\nCluster {}'.format(i))
         print(','.join([labels[t] for t in np.argsort(r)[-n_terms:]]))
+        
+        words = [labels[t] for t in np.argsort(r)[-n_terms:]]
+        
+        for word in words:
+            comment_words = comment_words + word + ' '
+        
+        wordcloud = WordCloud(width = 800, height = 800, 
+        background_color ='white', 
+        stopwords = stopwords, 
+        min_font_size = 10).generate(comment_words) 
+                
+        # plot the WordCloud image                        
+        plt.figure(figsize = (6, 6), facecolor = None) 
+        plt.imshow(wordcloud) 
+        plt.axis("off") 
+        plt.tight_layout(pad = 0) 
+  
+        plt.show() 
 
-
-get_top_keywords(tfidf_X, clusters, vectorizer.get_feature_names(), 10)
+get_top_keywords(tfidf_X, clusters, vectorizer.get_feature_names(), 20)
     
