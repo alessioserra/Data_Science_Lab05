@@ -5,6 +5,8 @@ from nltk.corpus import stopwords as sw
 import csv
 import string
 from sklearn.cluster.k_means_ import MiniBatchKMeans
+import numpy as np
+import pandas as pd
 
 file_list = os.listdir("T-newsgroups")
 dataset = {}
@@ -26,6 +28,8 @@ tfidf_X = vectorizer.fit_transform(dataset.values())
 #Clustering TF-IDF ( MiniBatchKMEANS n=4 best for now)
 km = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit(tfidf_X)
 assignments = km.predict(vectorizer.transform(dataset.values()))
+clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
+
 
 def dump_to_file(filename, assignments, dataset):
     with open(filename, mode="w", newline="") as csvfile:
@@ -40,4 +44,17 @@ def dump_to_file(filename, assignments, dataset):
 
 dump_to_file("result.csv", assignments, dataset)
 print("Computed Finished")
+
+"""
+Get top words
+"""
+def get_top_keywords(data, clusters, labels, n_terms):
+    df = pd.DataFrame(data.todense()).groupby(clusters).mean()
+
+    for i, r in df.iterrows():
+        print('\nCluster {}'.format(i))
+        print(','.join([labels[t] for t in np.argsort(r)[-n_terms:]]))
+
+
+get_top_keywords(tfidf_X, clusters, vectorizer.get_feature_names(), 10)
     
