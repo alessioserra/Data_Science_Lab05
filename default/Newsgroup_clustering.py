@@ -60,22 +60,11 @@ normalizer = Normalizer(copy=False)
 lsa = make_pipeline(svd,normalizer)
 tfidf_X = lsa.fit_transform(tfidf_X)
 
-
+#Clustering TF-IDF ( MiniBatchKMEANS n=4 best for now)
 model = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20)
-#model = KMeans(init='k-means++', max_iter=100, n_clusters=n_clusters, n_init=1, tol=0.00000001)
-print('Fitting data...')
 model.fit(tfidf_X)
-print('Predicting data...')
-#clusters = model.predict(vectorizer.transform(files))
 assignments = model.predict(lsa.transform(vectorizer.transform(dataset.values())))
 clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
-
-"""
-#Clustering TF-IDF ( MiniBatchKMEANS n=4 best for now)
-km = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit(tfidf_X)
-assignments = km.predict(vectorizer.transform(dataset.values()))
-clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
-"""
 
 def dump_to_file(filename, assignments, dataset):
     with open(filename, mode="w", newline="") as csvfile:
@@ -90,7 +79,6 @@ def dump_to_file(filename, assignments, dataset):
 
 dump_to_file("result.csv", assignments, dataset)
 print("Computed Finished")
-
 
 """
 Create WorkCloud
