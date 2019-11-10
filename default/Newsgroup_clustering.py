@@ -7,8 +7,11 @@ import string
 from sklearn.cluster.k_means_ import MiniBatchKMeans
 import numpy as np
 import pandas as pd
-from wordcloud import WordCloud, STOPWORDS 
+from wordcloud import WordCloud
 import matplotlib.pyplot as plt 
+from sklearn.decomposition import TruncatedSVD
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Normalizer
 
 file_list = os.listdir("T-newsgroups")
 dataset = {}
@@ -23,23 +26,56 @@ for file in file_list:
 #TF-IDF
 lemmaTokenizer = LemmaTokenizer()
 stop_words = sw.words('english')                                   
-stop_words.extend(["'d", "'ll", "'re", "'s", "'ve", 'could', 'doe', 'ha', 'might', 'must', "n't", 'need', 'sha', 'wa', 'wo', 'would'])
-vectorizer = TfidfVectorizer(tokenizer=lemmaTokenizer, max_df = 0.08, stop_words=stop_words)
+stop_words.extend(["'d", "'ll", "'re", "'s", "'ve", 'could', 'doe', 'ha', 'might', 'must', "n't", 'need', 'sha', 'wa',
+                   'wo', 'would', 'maynardramseycslaurentianca', 'henryzootorontoedu', 'u', 'right', 'dont',
+                   'gebcadredslpittedu', 'n3jxp', 'bd', 'pk115050wvnvmswvnetedu', 'nntppostinghost',
+                   'dyerursamajorspdcccom'
+                   , 'imaharvardrayssdlinusm2cspdccdyer', 'coegalonlarcnasagov', 'fulkcsrochesteredu', 'hst', 'pm', 'batf',
+                   'atf', 'mcovingtaiugaedu', 'n4tmi', 'warpedcsmontanaedu', 'ca', 'im', 'acad3alaskaedu',
+                   'nsmcaacad3alaskaedu', 'jdwarnerjournalismindianaedublue', 'acadalaskaedu',
+                    'imaharvardrayssdlinusmcspdccdyer', 'irvineuxhcsouiucedu', 'aejdcmuvmbitnet'
+                      ,'njxp', 'nsmcaacadalaskaedu', 'ntmi', 'pkwvnvmswvnetedu', 'one', 'cdtrocketswstratuscom',
+                   'cdtvosstratuscom','went', 'individu', 'true', 'apr', 'sound', 'posit', 'looking',
+                    'net', 'info', 'mind', 'jack', 'address', 'radio', 'word', 'looking', 'cold',
+                   'gari', 'sender', 'situat', 'guess', 'coupl', 'yet', 'sorri', 'yes', 'hour', 'especially',
+                   'tom', 'april', 'certainli', 'close', 'robert', 'msg', 'mail', 'sender', 'write', 'move',
+                   'scott', 'night', 'michael', 'expect', 'rule', 'accessdigexnet', 'far','abov', 'ani', 'becaus',
+                    'befor', 'dure', 'imaharvardrayssdlinusm2cspdccdy', 'imaharvardrayssdlinusmcspdccdy',
+                   'jdwarnerjournalismindianaedublu', 'onc', 'onli', 'ourselv', 'themselv', 'thi', 'veri', 'whi',
+                   'yourselv', 'becau', 'imaharvardrayssdlinusm2cspdccdi', 'imaharvardrayssdlinusmcspdccdi',
+                   'utzoohenry', 'name', 'giant', 'man', 'medium', 'told', 'taking', 'month', 'ago', 'friend', 'small'
+                   'mailing', 'pretty', 'young', 'prbaccessdigexcom', 'message', 'toronto', 'rocketswstratuscom',
+                   'aprkelvinjplnasagov', 'recently', 'likely', 'perhaps', 'special', 'old', 'normal', 'thank'
+                   'rocketswstratuscom', 'common', 'usually', 'mailing', 'small', 'certainly', 'near',
+                    'sorry', 'wasnt', 'anybody', 'looking', 'jrmgnvifasufledu'])
+
+vectorizer = TfidfVectorizer(tokenizer=lemmaTokenizer, min_df = 0.01, max_df = 0.08, stop_words=stop_words)
 tfidf_X = vectorizer.fit_transform(dataset.values())
 
-"""
-svd = TruncatedSVD(n_components=500)
-tsne = TSNE(n_components=100, perplexity=50, method='exact', verbose=1, init='random', early_exaggeration=12,
-            metric='cosine')
+n_components = 80
+# SVD
+print("Reducing dimensions..")
+svd = TruncatedSVD(n_components = n_components,random_state=42)
+normalizer = Normalizer(copy=False)
+lsa = make_pipeline(svd,normalizer)
+tfidf_X = lsa.fit_transform(tfidf_X)
 
-pipeline = make_pipeline(svd)
-tfidf_X = pipeline.fit_transform(tfidf_X)
-"""
 
+model = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20)
+#model = KMeans(init='k-means++', max_iter=100, n_clusters=n_clusters, n_init=1, tol=0.00000001)
+print('Fitting data...')
+model.fit(tfidf_X)
+print('Predicting data...')
+#clusters = model.predict(vectorizer.transform(files))
+assignments = model.predict(lsa.transform(vectorizer.transform(dataset.values())))
+clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
+
+"""
 #Clustering TF-IDF ( MiniBatchKMEANS n=4 best for now)
 km = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit(tfidf_X)
 assignments = km.predict(vectorizer.transform(dataset.values()))
 clusters = MiniBatchKMeans(n_clusters=4, init_size=1024, batch_size=2048, random_state=20).fit_predict(tfidf_X)
+"""
 
 def dump_to_file(filename, assignments, dataset):
     with open(filename, mode="w", newline="") as csvfile:
@@ -59,11 +95,12 @@ print("Computed Finished")
 """
 Create WorkCloud
 """
-def get_top_keywords(data, clusters, labels, n_terms):
+def get_top_keywords(data, clusters, labels, n_terms, stop_words):
     
-    df = pd.DataFrame(data.todense()).groupby(clusters).mean()
-
-    stopwords = set(STOPWORDS)
+    try:
+        df = pd.DataFrame(data.todense()).groupby(clusters).mean()
+    except:
+        df = pd.DataFrame(data).groupby(clusters).mean()
 
     for i, r in df.iterrows():
         
@@ -72,23 +109,26 @@ def get_top_keywords(data, clusters, labels, n_terms):
         print('\nCluster {}'.format(i))
         print(','.join([labels[t] for t in np.argsort(r)[-n_terms:]]))
         
-        words = [labels[t] for t in np.argsort(r)[-n_terms:]]
-        
+        wordList = [labels[t] for t in np.argsort(r)[-50:]]
+        words = []
+        for i in range(len(wordList)):
+            words.append(wordList[len(wordList)-1-i])
+
         for word in words:
             comment_words = comment_words + word + ' '
         
         wordcloud = WordCloud(width = 800, height = 800, 
         background_color ='white', 
-        stopwords = stopwords, 
+        stopwords = stop_words, 
         min_font_size = 10).generate(comment_words) 
                 
         # plot the WordCloud image                        
-        plt.figure(figsize = (6, 6), facecolor = None) 
+        plt.figure(figsize = (5, 5), facecolor = None) 
         plt.imshow(wordcloud) 
         plt.axis("off") 
         plt.tight_layout(pad = 0) 
   
         plt.show()
 
-get_top_keywords(tfidf_X, clusters, vectorizer.get_feature_names(), 20)
+get_top_keywords(vectorizer.transform(dataset.values()), clusters, vectorizer.get_feature_names(),25 , stop_words)
     
